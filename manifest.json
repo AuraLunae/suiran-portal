@@ -1,0 +1,17 @@
+{
+ "name": "テンシ ポータル",
+ "short_name": "ポータル",
+ "description": "学習記録とランキングを、サイトをまたいでひとつに。",
+ "start_url": "./index.html",
+ "scope": "./",
+ "display": "standalone",
+ "orientation": "portrait",
+ "background_color": "#f8f7f3",
+ "theme_color": "#f8f7f3",
+ "lang": "ja",
+ "icons": [
+  {"src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+  {"src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+  {"src": "icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"}
+ ]
+}
