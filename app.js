@@ -100,7 +100,7 @@ const siteStat=id=>((S.me&&S.me.sites)||[]).find(x=>x.site===id)||{site:id,devic
 const joined=id=>siteStat(id).answers>0;
 
 /* ========== 状態 ========== */
-const S={me:null,newKey:null,scope:'all',period:'allTime',rank:null,rankErr:null,editing:false};
+const S={me:null,scope:'all',period:'allTime',rank:null,rankErr:null,editing:false};
 let rankToken=0;
 
 /* ========== 描画：全体 ========== */
@@ -131,8 +131,8 @@ function renderWelcome(){
     const v=inp.value.trim();if(!v){say('ニックネームを入力してください。',true);return;}
     go.disabled=true;say('作成しています…');
     try{
-      const r=await rpc('portal_create_profile',{p_nickname:v});
-      S.newKey=r.key;say('');await reload();
+      await rpc('portal_create_profile',{p_nickname:v});
+      say('');await reload();
     }catch(err){say(err.message||'作成できませんでした。',true);go.disabled=false;}
   });
   app.append(recoverBlock(rise(node('div'))));
@@ -149,7 +149,7 @@ function recoverBlock(wrap){
   btn.addEventListener('click',async()=>{
     const v=inp.value.trim();if(!v){say('キーを貼り付けてください。',true);return;}
     btn.disabled=true;say('確認しています…');
-    try{await rpc('redeem_link_key',{p_key:v,p_site:'portal'});S.newKey=null;say('');await reload();}
+    try{await rpc('redeem_link_key',{p_key:v,p_site:'portal'});say('');await reload();}
     catch(err){say(err.message||'引き継げませんでした。',true);btn.disabled=false;}
   });
   wrap.append(d);return wrap;
@@ -169,7 +169,6 @@ function renderDash(){
     w.append(node('p','ニックネームを変更しても、運営の確認が済むまでは表示されません。','why'));
     app.append(rise(w));
   }
-  if(S.newKey)app.append(rise(keyBox(S.newKey,'発行したキー')));
 
   const sites=section('SITES',ri++);sites.id='sitesSec';app.append(sites);
   const list=node('div');list.id='sitesBox';sites.append(list);renderSites(true);
@@ -178,23 +177,25 @@ function renderDash(){
   renderRank();
 
   const ks=section('KEY',ri++);
-  ks.append(rise(node('p','各サイトの「ポータル連携」欄に貼り付けるキーです。安全のため、サーバーにはキーそのものを保管していないので、あとから表示できません。なくしたときは再発行してください。古いキーは使えなくなりますが、連携済みの端末はそのままです。','lead'),ri));
+  ks.append(rise(node('p','各サイトの「連携する」ボタンを押すと、このキーが自動で渡されます。手で貼り付けるときは、ここからコピーしてください。再発行すると古いキーは使えなくなりますが、連携済みの端末はそのままです。','lead'),ri));
   ks.lastChild.style.marginTop='0';
   const re=node('button','キーを再発行する','secondary');re.type='button';re.style.marginTop='18px';
-  const slot=node('div');slot.id='newKeySlot';
+  const slot=node('div');slot.id='keySlot';
+  const showKey=k=>{slot.replaceChildren(k?keyBox(k,'連携キー'):node('p','キーがまだ保存されていません。下の「キーを再発行する」で発行してください。','mini'));};
+  showKey(p.key);
   re.addEventListener('click',async()=>{
     if(!confirm('キーを再発行しますか？古いキーは使えなくなります。'))return;
     re.disabled=true;say('発行しています…');
-    try{const r=await rpc('portal_regenerate_key');S.newKey=r.key;say('');slot.replaceChildren(fadeIn(keyBox(r.key,'新しいキー'),0));}
+    try{const r=await rpc('portal_regenerate_key');if(S.me&&S.me.profile)S.me.profile.key=r.key;say('');showKey(r.key);}
     catch(err){say(err.message||'再発行できませんでした。',true);}
     finally{re.disabled=false;}
   });
-  ks.append(re,slot,recoverBlock(node('div')));
+  ks.append(slot,re,recoverBlock(node('div')));
   app.append(ks);
 }
 
 function keyBox(key,title){
-  const b=node('div',undefined,'keybox');b.append(node('p',title+'（この画面では今だけ表示されます）','label'));
+  const b=node('div',undefined,'keybox');b.append(node('p',title,'label'));
   const parts=key.split('-'),half=Math.ceil(parts.length/2);
   const k=node('span',undefined,'key');
   k.append(node('span',parts.slice(0,half).join('-')),document.createElement('br'),node('span',parts.slice(half).join('-')));
@@ -203,12 +204,7 @@ function keyBox(key,title){
   const cp=node('button','コピー','linkbtn');cp.type='button';
   cp.addEventListener('click',async()=>{const ok=await copyText(key);cp.textContent=ok?'コピーしました':'コピーできませんでした';setTimeout(()=>{cp.textContent='コピー';},2200);});
   row.append(cp);
-  if(S.newKey===key){
-    const done=node('button','保存した','linkbtn');done.type='button';
-    done.addEventListener('click',()=>{S.newKey=null;b.style.transition='opacity .5s';b.style.opacity='0';setTimeout(()=>b.remove(),500);});
-    row.append(done);
-  }
-  b.append(row,node('p','英単語サイトなどの「ポータル連携」欄に貼り付けると、同じ人の記録としてまとまります。安全な場所に保存しておいてください。','mini'));
+  b.append(row,node('p','各サイトの「連携する」ボタンを押すと、このキーが自動で使われます。他の人には見せないでください。','mini'));
   return b;
 }
 
@@ -257,7 +253,20 @@ function renderSites(first){
     else if(st.devices>0)row.append(node('p','連携済み。まだ回答がありません。','site-meta'));
     else row.append(node('p','サイトの「ポータル連携」欄にキーを貼ると参加できます。','site-meta'));
     const act=node('div',undefined,'site-actions');
-    if(c.url){const a=node('a','サイトを開く','linkbtn');a.href=c.url;a.target='_blank';a.rel='noopener';act.append(a);}
+    if(c.url){
+      // 連携ボタン：サイトの連携画面（#portal-link）をそのまま開く。キーはURLに載せず、持っていればコピーする
+      const lk=node('a',st.devices>0?'連携し直す':'連携する','linkbtn');
+      const base=c.url.replace(/#.*$/,'');
+      lk.href=base+'#portal-link';lk.target='_blank';lk.rel='noopener';
+      lk.addEventListener('click',e=>{
+        const key=S.me&&S.me.profile&&S.me.profile.key;
+        if(!key){e.preventDefault();say('キーがまだ保存されていません。下の「キーを再発行する」で発行してください。',true);return;}
+        lk.href=base+'#portal-link='+encodeURIComponent(key);   // クリックの直前に、最新のキーで作る
+        say('開いたサイトで「連携する」を選んでください。');
+      });
+      act.append(lk);
+      const a=node('a','サイトを開く','linkbtn');a.href=c.url;a.target='_blank';a.rel='noopener';act.append(a);
+    }
     if(st.devices>0){
       const un=node('button','連携を解除','linkbtn');un.type='button';
       un.addEventListener('click',async()=>{
