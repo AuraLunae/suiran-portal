@@ -7,6 +7,6 @@ window.PORTAL_CONFIG={
   brand:'テンシ ポータル',
   sites:[
     {id:'eitango',label:'テンシで英単語',short:'英単語',url:''},
-    {id:'kobun',  label:'古文単語',      short:'古文単語',url:''}
+    {id:'kobunbunpou',label:'Dr.Yの古典文法',short:'古典文法',url:'https://lightblueearphone.github.io/Kobunbunpou/'}
   ]
 };
