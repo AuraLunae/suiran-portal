@@ -7,6 +7,6 @@ window.PORTAL_CONFIG={
   brand:'テンシ ポータル',
   sites:[
     {id:'eitango',label:'テンシで英単語',short:'英単語',url:'https://suiran-angel.pages.dev/'},
-    {id:'kobunbunpou',label:'Dr.Yの古典文法',short:'古典文法',url:'https://lightblueearphone.github.io/Kobunbunpou/'}
+    {id:'kobunbunpou',label:'テンシで古典文法',short:'古典文法',url:'https://suiran-kobun.pages.dev/'}
   ]
 };
